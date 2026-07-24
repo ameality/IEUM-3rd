@@ -157,7 +157,7 @@
   </header>
 
   <div class="setup" id="setup" style="display:none">
-    <b>설정이 필요합니다.</b> <code>index.html</code> 안의 <code>API_URL='https://docs.google.com/spreadsheets/d/13srmH2I1-JuvA3IpSRAgQ0wcU3CeRTCbx5zS9LtAiZ0/edit?gid=0#gid=0'</code>에
+    <b>설정이 필요합니다.</b> <code>index.html</code> 안의 <code>API_URL</code>에
     구글 Apps Script 웹 앱 주소를 넣어주세요. 주소를 넣기 전에는 응답이 저장되지 않습니다.
   </div>
 
@@ -397,14 +397,17 @@ async function send(id){
   btn.disabled = true; btn.textContent = "보내는 중";
 
   try{
-    const res = await fetch(API_URL, {
-      method: "POST",
-      /* Content-Type을 지정하지 않아야 사전 요청(preflight) 없이 전송됩니다 */
-      body: JSON.stringify({
-        id, round: RLABEL[round], team: NAME[team],
-        when: WHEN[round][team], status: st.status, note
-      })
+    const q = new URLSearchParams({
+      action: "save",
+      id: id,
+      round: RLABEL[round],
+      team: NAME[team],
+      when: WHEN[round][team],
+      status: st.status,
+      note: note,
+      t: Date.now()
     });
+    const res = await fetch(API_URL + "?" + q.toString());
     const out = await res.json();
     if(!out.ok) throw new Error(out.error || "저장 실패");
     state[id] = {status:st.status, note, savedAt:out.savedAt};
@@ -424,7 +427,7 @@ async function loadAll(){
   if(!ready){ renderRows(); renderSummary(); return; }
   setBar("응답을 불러오는 중입니다…");
   try{
-    const res = await fetch(API_URL + "?t=" + Date.now());
+    const res = await fetch(API_URL + "?action=list&t=" + Date.now());
     const data = await res.json();
     Object.keys(state).forEach(k => delete state[k]);
     Object.entries(data).forEach(([k,v]) => { state[k] = v; });
