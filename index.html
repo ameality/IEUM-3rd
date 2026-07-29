@@ -44,6 +44,12 @@
   .cal td{border:1px solid var(--line);vertical-align:top;height:88px;padding:5px 5px 6px;font-size:12px}
   .cal td.empty{background:#FAFCFB}
   .cal td.mark{background:var(--wash)}
+  .cal td.deadline{background:#FBF3E2}
+  .cal td.deadline .dnum{color:var(--gold)}
+  .dbadge{display:inline-block;font-size:10px;font-weight:700;color:#fff;background:var(--gold);
+          padding:1px 5px;border-radius:2px;margin-left:4px;vertical-align:1px}
+  .dslot{color:#8A6420!important}
+  .dayrow.deadline{border-left:3px solid var(--gold)}
   .dnum{font-family:var(--serif);font-size:14px;font-weight:700;color:var(--ink);line-height:1.2}
   .cal td.mark .dnum{color:var(--green)}
   td.sun .dnum{color:#A8503E}
@@ -231,15 +237,24 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyyMdD9oS3NhYG46xGOHQ7h
 const TEAMS = ["t1","t2","t3","t4","t5","t6","t7"];
 const NAME = {t1:"더뉴",t2:"면천솔솔",t3:"부엔카미노",t4:"당찬딸기",t5:"어메이징토마토",t6:"꼬메메",t7:"하나루"};
 
-const SET_A = [{k:"t1",time:"10:00"},{k:"t2",time:"13:30"},{k:"t3",time:"16:00"}];   /* 월 */
-const SET_B = [{k:"t4",time:"10:00"},{k:"t5",time:"13:00"}];                          /* 수 */
-const SET_C = [{k:"t6",time:"15:00"},{k:"t7",time:"17:30"}];                          /* 목 */
-
 const PLAN = {
-  "2026-08-03":{r:"r1",set:SET_A}, "2026-08-05":{r:"r1",set:SET_B}, "2026-08-06":{r:"r1",set:SET_C},
-  "2026-08-19":{r:"r2",set:SET_B}, "2026-08-20":{r:"r2",set:SET_C}, "2026-08-24":{r:"r2",set:SET_A},
-  "2026-09-07":{r:"r3",set:SET_A}, "2026-09-09":{r:"r3",set:SET_B}, "2026-09-10":{r:"r3",set:SET_C}
+  /* 1회차 */
+  "2026-08-03":{r:"r1",set:[{k:"t2",time:"13:30"},{k:"t3",time:"16:00"}]},
+  "2026-08-05":{r:"r1",set:[{k:"t4",time:"10:00"},{k:"t5",time:"13:00"},{k:"t1",time:"16:00"}]},
+  "2026-08-06":{r:"r1",set:[{k:"t6",time:"15:00"},{k:"t7",time:"17:30"}]},
+  /* 2회차 */
+  "2026-08-19":{r:"r2",set:[{k:"t4",time:"10:00"},{k:"t5",time:"13:00"}]},
+  "2026-08-20":{r:"r2",set:[{k:"t6",time:"15:00"},{k:"t7",time:"17:30"}]},
+  "2026-08-24":{r:"r2",set:[{k:"t1",time:"10:00"},{k:"t3",time:"16:00"}]},
+  "2026-08-31":{r:"r2",set:[{k:"t2",time:"13:00"}]},
+  /* 3회차 */
+  "2026-09-07":{r:"r3",set:[{k:"t1",time:"10:00"},{k:"t2",time:"13:30"},{k:"t3",time:"16:00"}]},
+  "2026-09-09":{r:"r3",set:[{k:"t4",time:"10:00"},{k:"t5",time:"13:00"}]},
+  "2026-09-10":{r:"r3",set:[{k:"t6",time:"15:00"},{k:"t7",time:"17:30"}]}
 };
+
+/* 운영 마감 (컨설팅 방문 아님) */
+const DEADLINE = { "2026-09-23":"디자인팀 최종 시제품 전달" };
 
 const ROUNDS = [
   {id:"r1", label:"1회차", phase:"진단 및 방향 설정"},
@@ -288,11 +303,15 @@ function buildCalendar(){
         if(d === null){ td.className = "empty"; tr.appendChild(td); return; }
         const key = `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
         const info = PLAN[key];
-        td.className = (idx===0 ? "sun " : "") + (info ? "mark" : "");
+        const dl = DEADLINE[key];
+        td.className = (idx===0 ? "sun " : "") + (info ? "mark" : (dl ? "deadline" : ""));
         let html = `<span class="dnum">${d}</span>`;
         if(info){
           html += `<span class="rbadge">${RLABEL[info.r]}</span>`;
           info.set.forEach(s => { html += `<span class="slot"><i>${s.time}</i>${NAME[s.k]}</span>`; });
+        } else if(dl){
+          html += `<span class="dbadge">마감</span>`;
+          html += `<span class="slot dslot">${dl}</span>`;
         }
         td.innerHTML = html;
         tr.appendChild(td);
@@ -312,6 +331,16 @@ function buildCalendar(){
       row.innerHTML = `<h3>${dt.getMonth()+1}월 ${dt.getDate()}일 (${DOW[dt.getDay()]})
         <span class="rbadge">${RLABEL[info.r]}</span></h3>` +
         info.set.map(s => `<span class="slot"><i>${s.time}</i>${NAME[s.k]}</span>`).join("");
+      list.appendChild(row);
+    });
+    Object.entries(DEADLINE).forEach(([key,text]) => {
+      const dt = new Date(key + "T00:00:00");
+      if(dt.getFullYear() !== y || dt.getMonth() !== m) return;
+      const row = document.createElement("div");
+      row.className = "dayrow deadline";
+      row.innerHTML = `<h3>${dt.getMonth()+1}월 ${dt.getDate()}일 (${DOW[dt.getDay()]})
+        <span class="dbadge">마감</span></h3>
+        <span class="slot dslot">${text}</span>`;
       list.appendChild(row);
     });
     box.appendChild(list);
